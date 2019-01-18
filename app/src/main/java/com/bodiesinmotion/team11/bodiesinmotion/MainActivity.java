@@ -5,17 +5,44 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
+import android.view.SurfaceView;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 
 public class MainActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
 
+    private static final String TAG = "MainActivity";
+
     private Mat _rgba;
+
+    private CameraBridgeViewBase _openCvCameraView;
+
+    private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS:
+                {
+                    Log.i(TAG, "OpenCV loaded successfully");
+                    _openCvCameraView.enableView();
+                    //_openCvCameraView.setOnTouchListener(MainActivity.this);
+                } break;
+                default:
+                {
+                    super.onManagerConnected(status);
+                } break;
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,7 +51,9 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        //setContentView(R.layout.);
+        _openCvCameraView = (CameraBridgeViewBase) findViewById(R.id.camera_view);
+        _openCvCameraView.setVisibility(SurfaceView.VISIBLE);
+        _openCvCameraView.setCvCameraViewListener(this);
 
 //        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
 //        fab.setOnClickListener(new View.OnClickListener() {
@@ -34,6 +63,33 @@ public class MainActivity extends AppCompatActivity implements CameraBridgeViewB
 //                        .setAction("Action", null).show();
 //            }
 //        });
+    }
+
+    @Override
+    public void onPause()
+    {
+        super.onPause();
+        if (_openCvCameraView != null)
+            _openCvCameraView.disableView();
+    }
+
+    @Override
+    public void onResume()
+    {
+        super.onResume();
+        if (!OpenCVLoader.initDebug()) {
+            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+        } else {
+            Log.d(TAG, "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
+    }
+
+    public void onDestroy() {
+        super.onDestroy();
+        if (_openCvCameraView != null)
+            _openCvCameraView.disableView();
     }
 
     @Override
